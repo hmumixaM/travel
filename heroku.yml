@@ -1,0 +1,10 @@
+setup:
+  config:
+    MCP_TRANSPORT: streamable-http
+
+build:
+  languages:
+    - python
+
+run:
+  web: MCP_PORT=$PORT ${TRAVEL_SERVER:-travel-seats}

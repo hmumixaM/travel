@@ -1,0 +1,47 @@
+{
+  "name": "Travel MCP Server",
+  "description": "MCP servers for travel: reward flights, Google Flights, Google Maps",
+  "keywords": ["mcp", "travel", "flights", "maps"],
+  "stack": "heroku-24",
+  "env": {
+    "MCP_TRANSPORT": {
+      "description": "Transport mode: stdio, sse, or streamable-http",
+      "value": "streamable-http"
+    },
+    "TRAVEL_SERVER": {
+      "description": "Which server to run: travel-seats, travel-flights, or travel-maps",
+      "value": "travel-seats"
+    },
+    "SEATS_AERO_API_KEY": {
+      "description": "Seats.aero Partner API key (required for travel-seats)",
+      "required": false
+    },
+    "GOOGLE_MAPS_API_KEY": {
+      "description": "Google Maps API key (required for travel-maps)",
+      "required": false
+    },
+    "SEATS_RATE_LIMIT": {
+      "description": "Max requests/sec to Seats.aero (default: 1.0)",
+      "required": false
+    },
+    "FLIGHTS_RATE_LIMIT": {
+      "description": "Max requests/sec for Google Flights scraping (default: 0.5)",
+      "required": false
+    },
+    "MAPS_RATE_LIMIT": {
+      "description": "Max requests/sec to Google Maps API (default: 10.0)",
+      "required": false
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  }
+}
