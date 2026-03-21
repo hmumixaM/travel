@@ -13,5 +13,4 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
-*.lock
 airports_cache.json
