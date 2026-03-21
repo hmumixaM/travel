@@ -6,92 +6,97 @@ from pydantic import BaseModel, ConfigDict
 
 
 class Route(BaseModel):
+    model_config = ConfigDict(extra="allow")
     ID: str
-    OriginAirport: str
-    OriginRegion: str
-    DestinationAirport: str
-    DestinationRegion: str
-    NumDaysOut: int
-    Distance: int
-    Source: str
+    OriginAirport: str = ""
+    OriginRegion: str = ""
+    DestinationAirport: str = ""
+    DestinationRegion: str = ""
+    NumDaysOut: Optional[int] = None
+    Distance: Optional[int] = None
+    Source: str = ""
 
 
 class SearchResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
     ID: str
-    RouteID: str
-    Route: Route
-    Date: str
-    ParsedDate: str
-    YAvailable: bool
-    WAvailable: bool
-    JAvailable: bool
-    FAvailable: bool
-    YMileageCost: Optional[str]
-    WMileageCost: Optional[str]
-    JMileageCost: Optional[str]
-    FMileageCost: Optional[str]
-    YRemainingSeats: int
-    WRemainingSeats: int
-    JRemainingSeats: int
-    FRemainingSeats: int
-    YAirlines: Optional[str]
-    WAirlines: Optional[str]
-    JAirlines: Optional[str]
-    FAirlines: Optional[str]
-    YDirect: bool
-    WDirect: bool
-    JDirect: bool
-    FDirect: bool
-    Source: str
-    CreatedAt: str
-    UpdatedAt: str
-    AvailabilityTrips: Optional[str]
+    RouteID: str = ""
+    Route: Optional[Route] = None
+    Date: str = ""
+    ParsedDate: str = ""
+    YAvailable: bool = False
+    WAvailable: bool = False
+    JAvailable: bool = False
+    FAvailable: bool = False
+    YMileageCost: Optional[str] = None
+    WMileageCost: Optional[str] = None
+    JMileageCost: Optional[str] = None
+    FMileageCost: Optional[str] = None
+    YRemainingSeats: int = 0
+    WRemainingSeats: int = 0
+    JRemainingSeats: int = 0
+    FRemainingSeats: int = 0
+    YAirlines: Optional[str] = None
+    WAirlines: Optional[str] = None
+    JAirlines: Optional[str] = None
+    FAirlines: Optional[str] = None
+    YDirect: bool = False
+    WDirect: bool = False
+    JDirect: bool = False
+    FDirect: bool = False
+    Source: str = ""
+    CreatedAt: str = ""
+    UpdatedAt: str = ""
+    AvailabilityTrips: Optional[str] = None
 
 
 class SearchResponse(BaseModel):
-    data: list[SearchResult]
-    count: int
-    hasMore: bool
-    cursor: int
+    model_config = ConfigDict(extra="allow")
+    data: list[SearchResult] = []
+    count: int = 0
+    hasMore: bool = False
+    cursor: int = 0
 
 
 class AvailabilityResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
     ID: str
-    RouteID: str
-    Route: Route
-    Date: str
-    ParsedDate: str
-    YAvailable: bool
-    WAvailable: bool
-    JAvailable: bool
-    FAvailable: bool
-    YMileageCost: Optional[str]
-    WMileageCost: Optional[str]
-    JMileageCost: Optional[str]
-    FMileageCost: Optional[str]
-    YRemainingSeats: int
-    WRemainingSeats: int
-    JRemainingSeats: int
-    FRemainingSeats: int
-    YAirlines: Optional[str]
-    WAirlines: Optional[str]
-    JAirlines: Optional[str]
-    FAirlines: Optional[str]
-    YDirect: bool
-    WDirect: bool
-    JDirect: bool
-    FDirect: bool
-    Source: str
-    CreatedAt: str
-    UpdatedAt: str
-    AvailabilityTrips: Optional[str]
+    RouteID: str = ""
+    Route: Optional[Route] = None
+    Date: str = ""
+    ParsedDate: str = ""
+    YAvailable: bool = False
+    WAvailable: bool = False
+    JAvailable: bool = False
+    FAvailable: bool = False
+    YMileageCost: Optional[str] = None
+    WMileageCost: Optional[str] = None
+    JMileageCost: Optional[str] = None
+    FMileageCost: Optional[str] = None
+    YRemainingSeats: int = 0
+    WRemainingSeats: int = 0
+    JRemainingSeats: int = 0
+    FRemainingSeats: int = 0
+    YAirlines: Optional[str] = None
+    WAirlines: Optional[str] = None
+    JAirlines: Optional[str] = None
+    FAirlines: Optional[str] = None
+    YDirect: bool = False
+    WDirect: bool = False
+    JDirect: bool = False
+    FDirect: bool = False
+    Source: str = ""
+    CreatedAt: str = ""
+    UpdatedAt: str = ""
+    AvailabilityTrips: Optional[str] = None
 
 
 class AvailabilityResponse(BaseModel):
-    data: list[AvailabilityResult]
-    count: int
-    hasMore: bool
-    cursor: int
+    model_config = ConfigDict(extra="allow")
+    data: list[AvailabilityResult] = []
+    count: int = 0
+    hasMore: bool = False
+    cursor: int = 0
 
 
 class TripDetails(BaseModel):
