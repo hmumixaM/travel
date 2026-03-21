@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -21,7 +21,7 @@ class SearchResult(BaseModel):
     model_config = ConfigDict(extra="allow")
     ID: str
     RouteID: str = ""
-    Route: Optional[Route] = None
+    Route: Any = None
     Date: str = ""
     ParsedDate: str = ""
     YAvailable: bool = False
@@ -47,7 +47,7 @@ class SearchResult(BaseModel):
     Source: str = ""
     CreatedAt: str = ""
     UpdatedAt: str = ""
-    AvailabilityTrips: Optional[str] = None
+    AvailabilityTrips: Any = None
 
 
 class SearchResponse(BaseModel):
@@ -62,7 +62,7 @@ class AvailabilityResult(BaseModel):
     model_config = ConfigDict(extra="allow")
     ID: str
     RouteID: str = ""
-    Route: Optional[Route] = None
+    Route: Any = None
     Date: str = ""
     ParsedDate: str = ""
     YAvailable: bool = False
@@ -88,7 +88,7 @@ class AvailabilityResult(BaseModel):
     Source: str = ""
     CreatedAt: str = ""
     UpdatedAt: str = ""
-    AvailabilityTrips: Optional[str] = None
+    AvailabilityTrips: Any = None
 
 
 class AvailabilityResponse(BaseModel):
