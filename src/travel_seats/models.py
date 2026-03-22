@@ -1,9 +1,11 @@
 """Agent-friendly domain models for Seats.aero award flight search.
 
-Raw API responses are transformed into these clean types before being
-returned to the agent.  Each AwardFlight is one bookable option —
-the per-cabin (Y/W/J/F) columns from the API are pivoted into rows
-so the agent sees a flat list it can reason about.
+Raw API responses are transformed into these clean types.
+The per-cabin (Y/W/J/F) columns are pivoted into rows.
+
+Two output modes:
+- Summary: one row per date/cabin/source with best price and seat count
+- Detail: full flight itineraries for a specific date
 """
 
 from __future__ import annotations
@@ -46,6 +48,21 @@ class FlightLeg:
     miles: int
     taxes_usd: float
     seats: int
+
+
+@dataclass
+class DaySummary:
+    """Aggregated availability for one date + cabin + source."""
+    date: str
+    route: str
+    cabin: str
+    source: str
+    best_miles: int
+    best_taxes: str
+    max_seats: int
+    direct_available: bool
+    airlines: str
+    num_options: int
 
 
 def parse_availability(raw: dict) -> list[AwardFlight]:
@@ -95,34 +112,62 @@ def parse_trip(raw: dict) -> FlightLeg:
     )
 
 
-def format_award_flight(f: AwardFlight) -> dict:
-    """Serialize an AwardFlight for the agent."""
-    out: dict = {
-        "date": f.date,
-        "route": f"{f.origin}-{f.destination}",
-        "cabin": f.cabin,
-        "miles": f.miles,
-        "taxes": f"${f.taxes_usd:.2f}",
-        "seats": f.seats,
-        "airlines": f.airlines,
-        "direct": f.direct,
-        "source": f.source,
+def summarize_awards(awards: list[AwardFlight]) -> list[DaySummary]:
+    """Aggregate AwardFlights into per-date/cabin/source summaries."""
+    buckets: dict[tuple[str, str, str], list[AwardFlight]] = {}
+    for a in awards:
+        key = (a.date, a.cabin, a.source)
+        buckets.setdefault(key, []).append(a)
+
+    summaries: list[DaySummary] = []
+    for (date, cabin, source), group in buckets.items():
+        best = min(group, key=lambda a: a.miles)
+        total_options = sum(len(a.flights) for a in group) or len(group)
+        summaries.append(DaySummary(
+            date=date,
+            route=f"{best.origin}-{best.destination}",
+            cabin=cabin,
+            source=source,
+            best_miles=best.miles,
+            best_taxes=f"${best.taxes_usd:.2f}",
+            max_seats=max(a.seats for a in group),
+            direct_available=any(a.direct for a in group),
+            airlines=best.airlines,
+            num_options=total_options,
+        ))
+
+    summaries.sort(key=lambda s: (s.date, s.best_miles))
+    return summaries
+
+
+def format_summary(s: DaySummary) -> dict:
+    """Serialize a DaySummary for the agent."""
+    return {
+        "date": s.date,
+        "route": s.route,
+        "cabin": s.cabin,
+        "source": s.source,
+        "from_miles": s.best_miles,
+        "taxes": s.best_taxes,
+        "seats": s.max_seats,
+        "direct": s.direct_available,
+        "airlines": s.airlines,
+        "options": s.num_options,
     }
-    if f.flights:
-        out["flights"] = [
-            {
-                "flight": leg.flight,
-                "departs": leg.departs,
-                "arrives": leg.arrives,
-                "cabin": leg.cabin,
-                "aircraft": leg.aircraft,
-                "stops": leg.stops,
-                "connections": leg.connections,
-                "duration_min": leg.duration_min,
-                "miles": leg.miles,
-                "taxes": f"${leg.taxes_usd:.2f}",
-                "seats": leg.seats,
-            }
-            for leg in f.flights
-        ]
-    return out
+
+
+def format_flight_leg(leg: FlightLeg) -> dict:
+    """Serialize a FlightLeg for detail view."""
+    return {
+        "flight": leg.flight,
+        "departs": leg.departs,
+        "arrives": leg.arrives,
+        "cabin": leg.cabin,
+        "aircraft": leg.aircraft,
+        "stops": leg.stops,
+        "connections": leg.connections,
+        "duration_min": leg.duration_min,
+        "miles": leg.miles,
+        "taxes": f"${leg.taxes_usd:.2f}",
+        "seats": leg.seats,
+    }
