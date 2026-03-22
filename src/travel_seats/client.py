@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import date
 from typing import Optional
@@ -14,6 +15,8 @@ from travel_seats.models import (
     TripDetails,
 )
 
+log = logging.getLogger(__name__)
+
 SEATS_RATE_LIMIT = float(os.environ.get("SEATS_RATE_LIMIT", "1.0"))
 
 
@@ -25,7 +28,8 @@ class SeatsAeroClient:
             headers={"Partner-Authorization": api_key},
             timeout=30.0,
         )
-        self._limiter = RateLimitedQueue(SEATS_RATE_LIMIT)
+        self._limiter = RateLimitedQueue(SEATS_RATE_LIMIT, name="seats.aero")
+        log.info("SeatsAeroClient ready (base_url=%s, rate=%.1f/s)", self.base_url, SEATS_RATE_LIMIT)
 
     async def _request(
         self,
@@ -35,7 +39,9 @@ class SeatsAeroClient:
     ) -> dict:
         await self._limiter.acquire()
         url = f"{self.base_url}/{endpoint}"
+        log.info("HTTP %s %s params=%s", method, url, params)
         resp = await self._http.request(method, url, params=params)
+        log.info("HTTP %s %s -> %d (%d bytes)", method, url, resp.status_code, len(resp.content))
         resp.raise_for_status()
         return resp.json()
 
@@ -76,13 +82,18 @@ class SeatsAeroClient:
         }
         payload = {k: v for k, v in payload.items() if v is not None}
         data = await self._request("GET", "search", params=payload)
-        return SearchResponse(**data)
+        result = SearchResponse(**data)
+        log.info("Search %s->%s returned %d results", origin_airport, destination_airport, result.count)
+        return result
 
     async def get_routes(self, source: str) -> list[Route]:
         data = await self._request("GET", "routes", params={"source": source})
-        return [Route(**item) for item in data]
+        routes = [Route(**item) for item in data]
+        log.info("Routes source=%s returned %d routes", source, len(routes))
+        return routes
 
     async def get_trip_by_id(self, trip_id: str) -> TripDetails:
+        log.info("Getting trip id=%s", trip_id)
         data = await self._request("GET", f"trips/{trip_id}")
         if "data" in data and data["data"]:
             return TripDetails(**data["data"][0])
@@ -115,4 +126,6 @@ class SeatsAeroClient:
         }
         params = {k: v for k, v in params.items() if v is not None}
         data = await self._request("GET", "availability", params=params)
-        return AvailabilityResponse(**data)
+        result = AvailabilityResponse(**data)
+        log.info("Bulk availability source=%s returned %d results", source, result.count)
+        return result

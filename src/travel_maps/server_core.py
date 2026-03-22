@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from mcp.server.fastmcp import FastMCP
+
+log = logging.getLogger(__name__)
 
 MCP_TRANSPORT = os.environ.get("MCP_TRANSPORT", "streamable-http")
 MCP_HOST = os.environ.get("MCP_HOST", "0.0.0.0")
@@ -12,7 +15,5 @@ mcp = FastMCP(name="travel-maps", host=MCP_HOST, port=MCP_PORT)
 
 
 def main() -> None:
-    if MCP_TRANSPORT in ("sse", "streamable-http"):
-        print(f"[travel-maps] Starting on http://{MCP_HOST}:{MCP_PORT}")
-        print(f"[travel-maps] Transport: {MCP_TRANSPORT}")
+    log.info("Starting travel-maps on http://%s:%s transport=%s", MCP_HOST, MCP_PORT, MCP_TRANSPORT)
     mcp.run(transport=MCP_TRANSPORT)

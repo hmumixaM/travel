@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -13,8 +14,10 @@ import httpx
 from travel_common import RateLimitedQueue
 from travel_flights.server_core import mcp
 
+log = logging.getLogger(__name__)
+
 FLIGHTS_RATE_LIMIT = float(os.environ.get("FLIGHTS_RATE_LIMIT", "0.5"))
-_limiter = RateLimitedQueue(FLIGHTS_RATE_LIMIT)
+_limiter = RateLimitedQueue(FLIGHTS_RATE_LIMIT, name="google-flights")
 
 CSV_URL = "https://raw.githubusercontent.com/mborsetti/airportsdata/refs/heads/main/airportsdata/airports.csv"
 CACHE_FILE = Path(__file__).parent / "airports_cache.json"
@@ -23,6 +26,7 @@ airports: dict[str, str] = {}
 
 
 async def _fetch_airports_csv() -> dict[str, str]:
+    log.info("Fetching airports CSV from %s", CSV_URL)
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(CSV_URL)
         resp.raise_for_status()
@@ -39,13 +43,17 @@ async def _fetch_airports_csv() -> dict[str, str]:
 
     if result:
         CACHE_FILE.write_text(json.dumps(result))
+        log.info("Airports cache written: %d entries", len(result))
 
     return result
 
 
 def _load_cache() -> dict[str, str]:
     if CACHE_FILE.exists():
-        return json.loads(CACHE_FILE.read_text())
+        data = json.loads(CACHE_FILE.read_text())
+        log.info("Loaded airport cache: %d entries", len(data))
+        return data
+    log.info("No airport cache file found")
     return {}
 
 
@@ -115,6 +123,7 @@ async def search_flights(
         infants_on_lap: Number of infants on lap (default: 0)
         seat_class: economy, premium_economy, business, or first (default: economy)
     """
+    log.info("Tool search_flights: %s->%s on %s (return=%s, class=%s)", from_airport, to_airport, departure_date, return_date, seat_class)
     _ensure_airports()
     from_airport = from_airport.upper()
     to_airport = to_airport.upper()
@@ -140,6 +149,7 @@ async def search_flights(
     )
 
     await _limiter.acquire()
+    log.info("Calling fast-flights get_flights for %s->%s", from_airport, to_airport)
     result: Result = get_flights(
         flight_data=flight_data,
         trip=trip_type,
@@ -147,6 +157,8 @@ async def search_flights(
         passengers=passengers,
         fetch_mode="fallback",
     )
+    flight_count = len(result.flights) if hasattr(result, "flights") and result.flights else 0
+    log.info("fast-flights returned %d flights for %s->%s", flight_count, from_airport, to_airport)
 
     return _format_results(result, trip_type)
 
@@ -158,6 +170,7 @@ async def airport_search(query: str) -> str:
     Args:
         query: Search term (city name, airport name, or partial code). Min 2 chars.
     """
+    log.info("Tool airport_search: query=%r", query)
     _ensure_airports()
     assert len(query.strip()) >= 2, "Please provide at least 2 characters."
 
@@ -204,6 +217,7 @@ async def get_travel_dates(
 @mcp.tool()
 async def update_airports_database() -> str:
     """Update the airports database from the online CSV source."""
+    log.info("Tool update_airports_database")
     global airports
     fresh = await _fetch_airports_csv()
     assert fresh, "Failed to fetch airports."

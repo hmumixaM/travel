@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any, Optional
 
@@ -17,8 +18,10 @@ from google.type import latlng_pb2
 from travel_common import RateLimitedQueue
 from travel_maps.server_core import mcp
 
+log = logging.getLogger(__name__)
+
 MAPS_RATE_LIMIT = float(os.environ.get("MAPS_RATE_LIMIT", "10.0"))
-_limiter = RateLimitedQueue(MAPS_RATE_LIMIT)
+_limiter = RateLimitedQueue(MAPS_RATE_LIMIT, name="google-maps")
 
 _api_key: str | None = None
 _gmaps: googlemaps.Client | None = None
@@ -36,6 +39,7 @@ def _get_api_key() -> str:
 def _get_gmaps() -> googlemaps.Client:
     global _gmaps
     if _gmaps is None:
+        log.info("Initializing googlemaps.Client")
         _gmaps = googlemaps.Client(key=_get_api_key())
     return _gmaps
 
@@ -43,6 +47,7 @@ def _get_gmaps() -> googlemaps.Client:
 def _get_places() -> places_v1.PlacesAsyncClient:
     global _places_client
     if _places_client is None:
+        log.info("Initializing PlacesAsyncClient")
         _places_client = places_v1.PlacesAsyncClient(
             client_options={"api_key": _get_api_key()}
         )
@@ -52,6 +57,7 @@ def _get_places() -> places_v1.PlacesAsyncClient:
 def _get_routes() -> routing_v2.RoutesAsyncClient:
     global _routes_client
     if _routes_client is None:
+        log.info("Initializing RoutesAsyncClient")
         _routes_client = routing_v2.RoutesAsyncClient(
             client_options={"api_key": _get_api_key()}
         )
@@ -79,6 +85,7 @@ async def get_directions(
         destination: Destination address or place name
         mode: Mode of transport: driving, walking, bicycling, or transit
     """
+    log.info("Tool get_directions: %s -> %s (mode=%s)", origin, destination, mode)
     assert mode in TRAVEL_MODE_MAP, f"Mode must be one of {set(TRAVEL_MODE_MAP)}"
     await _limiter.acquire()
 
@@ -88,6 +95,7 @@ async def get_directions(
         travel_mode=TRAVEL_MODE_MAP[mode],
     )
     field_mask = "routes.distanceMeters,routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.navigationInstruction"
+    log.debug("Routes API request field_mask=%s", field_mask)
     response = await _get_routes().compute_routes(
         request=request,
         metadata=[("x-goog-fieldmask", field_mask)],
@@ -96,6 +104,10 @@ async def get_directions(
     assert response.routes, "No routes found."
     route = response.routes[0]
     leg = route.legs[0]
+    log.info("Directions %s->%s: distance=%dm, duration=%ss, steps=%d",
+             origin, destination, route.distance_meters,
+             route.duration.seconds if route.duration else "?",
+             len(leg.steps))
 
     steps = []
     for step in leg.steps:
@@ -128,6 +140,7 @@ async def get_distance(
         destination: Destination address or place name
         mode: Mode of transport: driving, walking, bicycling, or transit
     """
+    log.info("Tool get_distance: %s -> %s (mode=%s)", origin, destination, mode)
     assert mode in TRAVEL_MODE_MAP, f"Mode must be one of {set(TRAVEL_MODE_MAP)}"
     await _limiter.acquire()
 
@@ -144,6 +157,8 @@ async def get_distance(
 
     assert response.routes, "No route found between locations."
     route = response.routes[0]
+    log.info("Distance %s->%s: %dm, %ss", origin, destination, route.distance_meters,
+             route.duration.seconds if route.duration else "?")
 
     output: dict[str, Any] = {
         "total_distance_meters": route.distance_meters,
@@ -164,11 +179,13 @@ async def get_geocode(address: str) -> str:
     Args:
         address: Address or place name to geocode
     """
+    log.info("Tool get_geocode: %r", address)
     await _limiter.acquire()
     results = _get_gmaps().geocode(address)
     assert results, "Address not found."
 
     loc = results[0]["geometry"]["location"]
+    log.info("Geocode %r -> lat=%s lng=%s", address, loc["lat"], loc["lng"])
     return json.dumps({"lat": loc["lat"], "lng": loc["lng"]}, separators=(",", ":"))
 
 
@@ -181,6 +198,7 @@ async def find_place(
     Args:
         query: Place name, address, or description (e.g. 'best ramen in Tokyo')
     """
+    log.info("Tool find_place: %r", query)
     await _limiter.acquire()
 
     request = places_v1.SearchTextRequest(
@@ -193,6 +211,7 @@ async def find_place(
     )
 
     assert response.places, "No places found."
+    log.info("find_place %r returned %d results", query, len(response.places))
 
     results = []
     for place in response.places[:5]:
@@ -226,6 +245,7 @@ async def place_nearby(
         radius: Search radius in meters (max 50000)
         place_type: Type of place (e.g. 'restaurant', 'hotel', 'gas_station')
     """
+    log.info("Tool place_nearby: lat=%.4f lng=%.4f radius=%.0f type=%s", latitude, longitude, radius, place_type)
     await _limiter.acquire()
 
     center = latlng_pb2.LatLng(latitude=latitude, longitude=longitude)
@@ -243,6 +263,7 @@ async def place_nearby(
     )
 
     assert response.places, "Nothing nearby matching the criteria."
+    log.info("place_nearby returned %d results", len(response.places))
 
     results = []
     for place in response.places[:10]:
@@ -267,6 +288,7 @@ async def place_details(
     Args:
         place_id: The place_id (obtainable from find_place or place_nearby)
     """
+    log.info("Tool place_details: place_id=%s", place_id)
     await _limiter.acquire()
 
     request = places_v1.GetPlaceRequest(
@@ -277,6 +299,7 @@ async def place_details(
         request=request,
         metadata=[("x-goog-fieldmask", field_mask)],
     )
+    log.info("place_details %s: name=%s", place_id, response.display_name.text if response.display_name else "?")
 
     output: dict[str, Any] = {
         "name": response.display_name.text if response.display_name else None,

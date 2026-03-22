@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from travel_seats.server_core import get_client, mcp
+
+log = logging.getLogger(__name__)
 
 
 class SearchRequest(BaseModel):
@@ -71,6 +74,7 @@ class SearchRequest(BaseModel):
 @mcp.tool()
 async def cached_search(request: SearchRequest) -> dict:
     """Search for award flight availability via Seats.aero cached data."""
+    log.info("Tool cached_search: %s -> %s", request.origin_airport, request.destination_airport)
     client = get_client()
     result = await client.search(**request.model_dump(exclude_unset=True))
     return result.model_dump()
@@ -90,6 +94,7 @@ async def get_bulk_availability(
     include_filtered: Optional[bool] = None,
 ) -> dict:
     """Retrieve bulk award availability from a specific mileage program."""
+    log.info("Tool get_bulk_availability: source=%s cabin=%s", source, cabin)
     client = get_client()
     result = await client.get_bulk_availability(
         source=source,
@@ -109,6 +114,7 @@ async def get_bulk_availability(
 @mcp.tool()
 async def get_trip_by_id(trip_id: str) -> dict:
     """Retrieve a single trip by its ID."""
+    log.info("Tool get_trip_by_id: %s", trip_id)
     client = get_client()
     result = await client.get_trip_by_id(trip_id=trip_id)
     return result.model_dump()
@@ -117,6 +123,7 @@ async def get_trip_by_id(trip_id: str) -> dict:
 @mcp.tool()
 async def get_routes(source: str) -> list[dict]:
     """Retrieve all routes for a given mileage program source."""
+    log.info("Tool get_routes: source=%s", source)
     client = get_client()
     routes = await client.get_routes(source=source)
     return [r.model_dump() for r in routes]
