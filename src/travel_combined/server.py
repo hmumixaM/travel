@@ -82,7 +82,7 @@ def main() -> None:
         MCP_HOST,
         MCP_PORT,
     )
-    uvicorn.run(app, host=MCP_HOST, port=MCP_PORT)
+    uvicorn.run("travel_combined.server:app", host=MCP_HOST, port=MCP_PORT)
 
 
 if __name__ == "__main__":
