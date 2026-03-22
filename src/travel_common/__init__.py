@@ -1,6 +1,10 @@
 import logging
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from travel_common.rate_limiter import RateLimitedQueue
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
