@@ -1,6 +1,6 @@
 {
   "name": "Travel MCP Server",
-  "description": "MCP servers for travel: reward flights, Google Flights, Google Maps",
+  "description": "Combined MCP server: reward flights, Google Flights, and Google Maps on a single dyno",
   "keywords": ["mcp", "travel", "flights", "maps"],
   "stack": "heroku-24",
   "env": {
@@ -8,17 +8,13 @@
       "description": "Transport mode: stdio, sse, or streamable-http",
       "value": "streamable-http"
     },
-    "TRAVEL_SERVER": {
-      "description": "Which server to run: travel-seats, travel-flights, or travel-maps",
-      "value": "travel-seats"
-    },
     "SEATS_AERO_API_KEY": {
-      "description": "Seats.aero Partner API key (required for travel-seats)",
-      "required": false
+      "description": "Seats.aero Partner API key",
+      "required": true
     },
     "GOOGLE_MAPS_API_KEY": {
-      "description": "Google Maps API key (required for travel-maps)",
-      "required": false
+      "description": "Google Maps API key",
+      "required": true
     },
     "SEATS_RATE_LIMIT": {
       "description": "Max requests/sec to Seats.aero (default: 1.0)",
@@ -30,6 +26,10 @@
     },
     "MAPS_RATE_LIMIT": {
       "description": "Max requests/sec to Google Maps API (default: 10.0)",
+      "required": false
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)",
       "required": false
     }
   },

@@ -17,9 +17,11 @@ dependencies = [
     "googlemaps>=4.10.0",
     "google-maps-places>=0.7.0",
     "google-maps-routing>=0.6.0",
+    "uvicorn>=0.30.0",
 ]
 
 [project.scripts]
+travel-combined = "travel_combined.server:main"
 travel-seats = "travel_seats.server:main"
 travel-flights = "travel_flights.server:main"
 travel-maps = "travel_maps.server:main"
@@ -29,7 +31,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/travel_common", "src/travel_seats", "src/travel_flights", "src/travel_maps"]
+packages = ["src/travel_common", "src/travel_combined", "src/travel_seats", "src/travel_flights", "src/travel_maps"]
 
 [dependency-groups]
 dev = [

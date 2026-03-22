@@ -1,1 +1,1 @@
-web: MCP_PORT=$PORT ${TRAVEL_SERVER:-travel-seats}
+web: MCP_PORT=$PORT travel-combined

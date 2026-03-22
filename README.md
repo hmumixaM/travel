@@ -1,12 +1,12 @@
 # Travel MCP Server
 
-Three independent MCP servers for travel planning, deployable to Heroku via streamable-http.
+Three MCP servers for travel planning, combined into a single process and deployed to Heroku on one dyno.
 
-| Server | Command | Description |
-|--------|---------|-------------|
-| **travel-seats** | `travel-seats` | Award flight search via [Seats.aero](https://seats.aero) Partner API |
-| **travel-flights** | `travel-flights` | Google Flights search via [fast-flights](https://pypi.org/project/fast-flights/) |
-| **travel-maps** | `travel-maps` | Google Maps directions, geocoding, and places |
+| MCP | Endpoint | Description |
+|-----|----------|-------------|
+| **travel-seats** | `/seats/mcp` | Award flight search via [Seats.aero](https://seats.aero) Partner API |
+| **travel-flights** | `/flights/mcp` | Google Flights search via [fast-flights](https://pypi.org/project/fast-flights/) |
+| **travel-maps** | `/maps/mcp` | Google Maps directions, geocoding, and places |
 
 ## Setup
 
@@ -16,10 +16,13 @@ uv sync
 
 ## Environment Variables
 
+Copy `.env.example` or create `.env` in the project root. Variables are loaded automatically via `python-dotenv`.
+
 ### Common
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `LOG_LEVEL` | `INFO` | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `MCP_TRANSPORT` | `streamable-http` | Transport: `stdio`, `sse`, or `streamable-http` |
 | `MCP_HOST` | `0.0.0.0` | HTTP bind host |
 | `MCP_PORT` | `8000` | HTTP bind port |
@@ -47,41 +50,30 @@ uv sync
 ## Run Locally
 
 ```bash
-# Seats.aero
-SEATS_AERO_API_KEY=your_key travel-seats
+# Combined server (all three MCPs on one port)
+travel-combined
 
-# Google Flights
+# Or run individually
+travel-seats
 travel-flights
-
-# Google Maps
-GOOGLE_MAPS_API_KEY=your_key travel-maps
+travel-maps
 ```
+
+The combined server exposes:
+- `http://localhost:8000/seats/mcp`
+- `http://localhost:8000/flights/mcp`
+- `http://localhost:8000/maps/mcp`
+- `http://localhost:8000/health`
 
 ## Deploy to Heroku
 
-Each server is deployed as a separate Heroku app from the same repo.
+All three MCPs run on a single dyno.
 
 ```bash
-# Create three Heroku apps
-heroku create travel-seats-mcp
-heroku create travel-flights-mcp
-heroku create travel-maps-mcp
-
-# Configure travel-seats
-heroku config:set TRAVEL_SERVER=travel-seats -a travel-seats-mcp
-heroku config:set MCP_TRANSPORT=streamable-http -a travel-seats-mcp
-heroku config:set SEATS_AERO_API_KEY=your_key -a travel-seats-mcp
-
-# Configure travel-flights
-heroku config:set TRAVEL_SERVER=travel-flights -a travel-flights-mcp
-heroku config:set MCP_TRANSPORT=streamable-http -a travel-flights-mcp
-
-# Configure travel-maps
-heroku config:set TRAVEL_SERVER=travel-maps -a travel-maps-mcp
-heroku config:set MCP_TRANSPORT=streamable-http -a travel-maps-mcp
-heroku config:set GOOGLE_MAPS_API_KEY=your_key -a travel-maps-mcp
-
-# Deploy (same repo to all three)
+heroku create travel-mcp
+heroku config:set MCP_TRANSPORT=streamable-http -a travel-mcp
+heroku config:set SEATS_AERO_API_KEY=your_key -a travel-mcp
+heroku config:set GOOGLE_MAPS_API_KEY=your_key -a travel-mcp
 git push heroku main
 ```
 
