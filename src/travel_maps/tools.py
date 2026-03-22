@@ -87,7 +87,7 @@ async def get_directions(
         destination=Waypoint(address=destination),
         travel_mode=TRAVEL_MODE_MAP[mode],
     )
-    field_mask = "routes.distanceMeters,routes.duration,routes.legs.steps.navigationInstruction,routes.legs.steps.localizedValues"
+    field_mask = "routes.distanceMeters,routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.navigationInstruction"
     response = await _get_routes().compute_routes(
         request=request,
         metadata=[("x-goog-fieldmask", field_mask)],
@@ -102,14 +102,14 @@ async def get_directions(
         step_info: dict[str, Any] = {}
         if step.navigation_instruction:
             step_info["instruction"] = step.navigation_instruction.instructions
-        if step.localized_values:
-            step_info["distance"] = step.localized_values.distance.text if step.localized_values.distance else None
-            step_info["duration"] = step.localized_values.duration.text if step.localized_values.duration else None
+        step_info["distance_meters"] = step.distance_meters
+        if step.static_duration:
+            step_info["duration_seconds"] = step.static_duration.seconds
         steps.append({k: v for k, v in step_info.items() if v})
 
     output = {
         "total_distance_meters": route.distance_meters,
-        "total_duration": route.duration.seconds if route.duration else None,
+        "total_duration_seconds": route.duration.seconds if route.duration else None,
         "steps": steps,
     }
     return json.dumps(output, separators=(",", ":"))
